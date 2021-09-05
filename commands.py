@@ -91,7 +91,7 @@ class DGitCommand():
         print('Changes')
         for data in diff_data:
             if data['status'] == True:
-                print(f'{TColors.WHITE}{data["data"]}')
+                print(f'\n\n{TColors.WHITE}{data["data"]}')
                 formatted_out = diff_out(data['data'])
                 for line in formatted_out:
                     print(line)

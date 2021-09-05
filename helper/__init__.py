@@ -24,12 +24,12 @@ def diff_out(source_file):
     formatted_diff = []
     with open(source_file, 'r') as f:
         source_lines = f.read().splitlines()
-        source_lines =[f"{count} {a}" for count, a in enumerate(source_lines, 1)]
+        # source_lines =[f"{count} {a}" for count, a in enumerate(source_lines, 1)]
 
 
     with open(f'{OBJECT_PATH}/{get_file_index(source_file)}/content', 'r') as f:
         content_lines = f.read().splitlines()
-        content_lines = [f"{count} {a}" for count, a in enumerate(content_lines, 1)]
+        # content_lines = [f"{count} {a}" for count, a in enumerate(content_lines, 1)]
 
     for line in difflib.unified_diff(content_lines,source_lines):
         if line[0] == '-' and line[0:3] != '---':

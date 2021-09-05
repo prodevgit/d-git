@@ -1184,11 +1184,15 @@ def unified_diff(a, b, fromfile='', tofile='', fromfiledate='',
                     yield ' ' + line
                 continue
             if tag in {'replace', 'delete'}:
+                del_count = i2
                 for line in a[i1:i2]:
-                    yield '-' + line
+                    yield f'- {del_count} {line}'
+                    del_count = del_count + 1
             if tag in {'replace', 'insert'}:
+                ins_count = j1
                 for line in b[j1:j2]:
-                    yield '+' + line
+                    ins_count = ins_count+1
+                    yield f'+ {ins_count} {line}'
 
 
 ########################################################################
