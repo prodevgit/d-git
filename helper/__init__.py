@@ -1,5 +1,9 @@
-from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH
+
+
+from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH, TColors
+from helper import difflib
 from serializer import FileSerializer
+from itertools import chain, zip_longest
 
 
 def write_index(fid,branch,commit):
@@ -16,13 +20,25 @@ def get_file_index(path):
     return x
 
 
-def compare(source_file):
+def diff_out(source_file):
+    formatted_diff = []
     with open(source_file, 'r') as f:
-        d = set(f.read().splitlines())
-    with open(f'{OBJECT_PATH}/{get_file_index(source_file)}/content', 'r') as f:
-        e = set(f.read().splitlines())
+        source_lines = f.read().splitlines()
+        # source_lines =[f"{count} {a}" for count, a in enumerate(source_lines, 1)]
 
-    return d-e
+
+    with open(f'{OBJECT_PATH}/{get_file_index(source_file)}/content', 'r') as f:
+        content_lines = f.read().splitlines()
+        # content_lines = [f"{count} {a}" for count, a in enumerate(content_lines, 1)]
+
+    for line in difflib.unified_diff(content_lines,source_lines):
+        if line[0] == '-' and line[0:3] != '---':
+            formatted_diff.append(f'{TColors.DIFF}{line}')
+        elif line[0] == '+' and line[0:3] != '+++':
+            formatted_diff.append(f'{TColors.OKGREEN}{line}')
+        else:
+            formatted_diff.append(f'{TColors.WHITE}{line}')
+    return formatted_diff
 
 def multiple_find(str,query_list):
     s = [str.find(x) for x in query_list]

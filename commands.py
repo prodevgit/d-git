@@ -1,7 +1,7 @@
 import os
 
 from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors
-from helper import multiple_find, get_file_index, compare
+from helper import multiple_find, get_file_index, diff_out
 from models import DGitFile
 
 
@@ -91,6 +91,7 @@ class DGitCommand():
         print('Changes')
         for data in diff_data:
             if data['status'] == True:
-                diff = compare(data['data'])
-                print(diff)
-                # print(f"{TColors.DIFF}{data['data']}")
+                print(f'\n\n{TColors.WHITE}{data["data"]}')
+                formatted_out = diff_out(data['data'])
+                for line in formatted_out:
+                    print(line)
