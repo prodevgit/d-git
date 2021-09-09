@@ -4,9 +4,12 @@ INDEX_PATH = '.dgit/index'
 
 BRANCH_PATH = '.dgit/branch'
 
+HEAD = '.dgit/HEAD'
+
 RECENT_PATH = './dgit/recent_registry'
 
-BRANCH_INDEX = 'branch'
+BRANCH_REF = '.dgit/refs'
+
 
 DGIT_IGNORE = '.dgitignore'
 

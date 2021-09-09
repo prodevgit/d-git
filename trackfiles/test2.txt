@@ -15,8 +15,9 @@ class ProductSerializer(serializers.ModelSerializer):
 class ProductUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Productw
+        model = Product
         exclude = ['object_id','quantity','qr']
+
 class StockLogSerializer(serializers.ModelSerializer):
     product = SerializerMethodField()
     date = SerializerMethodField()
@@ -24,12 +25,10 @@ class StockLogSerializer(serializers.ModelSerializer):
     def get_product(self,stocklog):
         return stocklog.product.name
 
-as
-23
+    def get_date(self,stocklog):
         date = stocklog.date.date()
         return date
 
     class Meta:
-    e
         model = StockLog
         fields = '__all__'
