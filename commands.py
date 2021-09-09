@@ -1,6 +1,10 @@
 import os
 
-from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF
+import paramiko
+from paramiko.ssh_exception import SSHException
+
+from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, CLONE_BY_SSH, \
+    DGIT_SSH_SERVER_COMMAND
 from helper import multiple_find, get_file_index, diff_out
 from models import DGitFile
 from network import push, checkout, clone
@@ -41,8 +45,27 @@ class DGitCommand():
                             commit=None
                         ).save()
 
-    def clone(self,repository,clone_by,token):
-        print(clone(repository,clone_by,token))
+    def clone(self,sshkey,repository):
+        clone_by = None
+        token = None
+        if '@' in repository:
+            clone_by = CLONE_BY_SSH
+            hostname, repository = repository.split(':')
+            user, hostname = hostname.split('@')
+            from paramiko.client import SSHClient
+            client = SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                client.connect(hostname=hostname, username=user, key_filename=sshkey)
+                stdin, stdout, stderr = client.exec_command(DGIT_SSH_SERVER_COMMAND)
+                token = stdout.read().decode("utf8").strip()
+            except SSHException as e:
+                print(e)
+                print("Can't connect to Dgit SSH server. SSH Authentication failed")
+            client.close()
+
+        if token and clone_by:
+            print(clone(repository,clone_by,token))
 
     def branch(self):
 

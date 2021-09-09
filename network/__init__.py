@@ -47,5 +47,4 @@ def clone(repository,clone_by,token):
     data={}
     data['repository']=repository
     r = requests.post(f'{BASE_URL}/repository/clone', data=data,params={'clone_by': clone_by},headers=HEADERS)
-    print(r.text)
     return r.json()

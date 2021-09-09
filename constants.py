@@ -13,6 +13,11 @@ BRANCH_REF = '.dgit/refs'
 
 DGIT_IGNORE = '.dgitignore'
 
+CLONE_BY_SSH = 'ssh'
+CLONE_BY_USERAUTH = 'userauth'
+
+DGIT_SSH_SERVER_COMMAND = '/home/devd/dev/d-git-server/venv/bin/python /home/devd/dev/d-git-server/generate_ssh_token.py'
+
 class TColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'

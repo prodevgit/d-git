@@ -24,32 +24,7 @@ def branch():
 @click.argument('repository')
 @click.option('--sshkey', '-sk')
 def clone(sshkey,repository):
-    print(sshkey)
-    if '@' in repository:
-        print('ssh')
-        hostname,repository = repository.split(':')
-        user,hostname = hostname.split('@')
-        print(hostname)
-        print(repository)
-        from paramiko.client import SSHClient
-        client = SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            client.connect(hostname=hostname,username=user,key_filename=sshkey)
-            stdin, stdout, stderr = client.exec_command('/home/devd/dev/d-git-server/venv/bin/python /home/devd/dev/d-git-server/generate_ssh_token.py')
-            # client.
-            token = stdout.read().decode("utf8").strip()
-            print(f'STDOUT: {token}')
-            print(f'STDERR: {stderr.read().decode("utf8")}')
-        except SSHException as e:
-            print(e)
-            print("Can't connect to Dgit SSH server. SSH Authentication failed")
-
-        client.close()
-
-        dgit_instance.clone(repository,'ssh',token)
-    # dgit_instance.init_repo()
-    # print("DGit initialized for your project")
+    dgit_instance.clone(sshkey,repository)
 
 @main.command()
 def status():
