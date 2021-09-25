@@ -1,11 +1,18 @@
+import os
+import sys
 import click
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from commands import DGitCommand
 
 dgit_instance = DGitCommand()
+
 @click.group()
 def main():
     click.echo("This is a CLI built with Click ✨")
-
+    if dgit_instance.active == False:
+        exit()
 @main.command()
 def init():
     dgit_instance.init_repo()
@@ -72,5 +79,8 @@ def push():
     print('push')
     dgit_instance.push()
 
-if __name__ == "__main__":
+def entry():
     main()
+
+if __name__ == "__main__":
+    entry()

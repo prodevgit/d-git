@@ -15,9 +15,21 @@ class DGitCommand():
 
     def __init__(self):
         self.cwd = os.getcwd()
-        with open(DGIT_IGNORE,'r') as ignore_file:
-            self.ignore_ = ignore_file.read().splitlines()
-
+        self.active = False
+        try:
+            with open(DGIT_IGNORE,'r') as ignore_file:
+                self.ignore_ = ignore_file.read().splitlines()
+        except FileNotFoundError:
+            import sys
+            try:
+                arg = sys.argv[1]
+                if arg == 'clone':
+                    self.active = True
+                else:
+                    print("Invalid Repository")
+                    self.active = False
+            except:
+                pass
     def init_repo(self):
         if not os.path.isdir('.dgit'):
             os.mkdir('.dgit')
@@ -266,7 +278,7 @@ class DGitCommand():
 
         return branch_id
 
-    def diff_files(self): 
+    def diff_files(self):
         """
         Returns various lists as follows\n
         indices : Files in index registry\n
