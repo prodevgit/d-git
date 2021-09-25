@@ -1,14 +1,24 @@
+DGIT = '.dgit'
+
 OBJECT_PATH = '.dgit/objects'
 
 INDEX_PATH = '.dgit/index'
 
 BRANCH_PATH = '.dgit/branch'
 
+HEAD = '.dgit/HEAD'
+
 RECENT_PATH = './dgit/recent_registry'
 
-BRANCH_INDEX = 'branch'
+BRANCH_REF = '.dgit/refs'
+
+BRANCH_REF_INDEX = '.dgit/refs/REF_INDEX'
+
+USER_SIGNATURE = '.dgit/signature'
 
 DGIT_IGNORE = '.dgitignore'
+
+CLONE_BY_USERAUTH = 'userauth'
 
 class TColors:
     HEADER = '\033[95m'
