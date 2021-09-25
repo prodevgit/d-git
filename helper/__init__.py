@@ -44,3 +44,8 @@ def multiple_find(str,query_list):
 def check_branch_exists(branch_name):
     return 0
 
+def process_clone_data(clone_data):
+    branches = clone_data['data']['data']
+    for i in branches:
+        print(i['name'])
+

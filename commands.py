@@ -6,7 +6,7 @@ from paramiko.ssh_exception import SSHException
 
 from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, \
      USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX
-from helper import multiple_find, get_file_index, diff_out
+from helper import multiple_find, get_file_index, diff_out, process_clone_data
 from models import DGitFile
 from network import push, checkout, clone, get_ssh_server_command
 
@@ -19,6 +19,7 @@ class DGitCommand():
         try:
             with open(DGIT_IGNORE,'r') as ignore_file:
                 self.ignore_ = ignore_file.read().splitlines()
+                self.active = True
         except FileNotFoundError:
             import sys
             try:
@@ -31,10 +32,16 @@ class DGitCommand():
             except:
                 pass
     def init_repo(self):
+        # if not os.path.isdir('.dgit'):
+        print(99)
         if not os.path.isdir('.dgit'):
             os.mkdir('.dgit')
+        if not os.path.isdir(OBJECT_PATH):
             os.mkdir(OBJECT_PATH)
+        if not os.path.isdir(BRANCH_REF):
             os.mkdir(BRANCH_REF)
+        with open(BRANCH_REF_INDEX,'wb+') as f:
+            f.write(b'')
         registry = open(f'{INDEX_PATH}','wb')
         with open(HEAD,'wb+') as head:
             head.write(b'')
@@ -59,6 +66,11 @@ class DGitCommand():
                         ).save()
 
     def clone(self,sshkey,repository):
+        if not os.path.isdir(DGIT):
+            os.mkdir(DGIT)
+        if os.path.isfile(USER_SIGNATURE):
+            print("You're already in a repository")
+            # exit()
         data = {}
         if '@' in repository:
             hostname, repository = repository.split(':')
@@ -84,11 +96,10 @@ class DGitCommand():
         if data['status'] == 'True':
             token = data['data']
             if token:
-                if not os.path.isdir(DGIT):
-                    os.mkdir(DGIT)
                 with open(USER_SIGNATURE,'wb+') as signature:
                     signature.write(bytes(token,'utf-8'))
                 clone_data=clone(token)
+                process_clone_data(clone_data)
                 #call dgit init after this
         else:
             print(data['message'])

@@ -15,6 +15,7 @@ def main():
         exit()
 @main.command()
 def init():
+    print(99999)
     dgit_instance.init_repo()
     print("DGit initialized for your project")
 
