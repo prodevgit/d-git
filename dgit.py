@@ -1,7 +1,4 @@
 import click
-import paramiko
-from paramiko.ssh_exception import SSHException
-
 from commands import DGitCommand
 
 dgit_instance = DGitCommand()
@@ -10,8 +7,6 @@ def main():
     click.echo("This is a CLI built with Click ✨")
 
 @main.command()
-# @click.argument('name')
-# @click.option('--init', '-i')
 def init():
     dgit_instance.init_repo()
     print("DGit initialized for your project")

@@ -42,9 +42,13 @@ def push(repository,branch,commit,file_data):
                               headers=HEADERS)
             print(r.json())
 
-def clone(repository,clone_by,token):
+def clone(token):
     HEADERS = {'Authorization': token}
-    data={}
-    data['repository']=repository
-    r = requests.post(f'{BASE_URL}/repository/clone', data=data,params={'clone_by': clone_by},headers=HEADERS)
+    print(HEADERS)
+    # r = requests.post(f'{BASE_URL}/repository/clone', data=data,params={'clone_by': clone_by},headers=HEADERS)
+    r = requests.post(f'{BASE_URL}/repository/clone', headers=HEADERS)
+    return r.json()
+
+def get_ssh_server_command():
+    r = requests.get(f'{BASE_URL}/ssh/server-command-retreive')
     return r.json()

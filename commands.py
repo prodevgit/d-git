@@ -1,13 +1,14 @@
+import json
 import os
 
 import paramiko
 from paramiko.ssh_exception import SSHException
 
-from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, CLONE_BY_SSH, \
-    DGIT_SSH_SERVER_COMMAND
+from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, \
+     USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX
 from helper import multiple_find, get_file_index, diff_out
 from models import DGitFile
-from network import push, checkout, clone
+from network import push, checkout, clone, get_ssh_server_command
 
 
 class DGitCommand():
@@ -46,10 +47,8 @@ class DGitCommand():
                         ).save()
 
     def clone(self,sshkey,repository):
-        clone_by = None
-        token = None
+        data = {}
         if '@' in repository:
-            clone_by = CLONE_BY_SSH
             hostname, repository = repository.split(':')
             user, hostname = hostname.split('@')
             from paramiko.client import SSHClient
@@ -57,21 +56,33 @@ class DGitCommand():
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             try:
                 client.connect(hostname=hostname, username=user, key_filename=sshkey)
+                ssh_response = get_ssh_server_command()
+                if ssh_response['status'] == False:
+                    print("Clone failed due to dgit server error")
+                    return 0
+                DGIT_SSH_SERVER_COMMAND = ssh_response['data'].replace('\n','') + ' ' + repository
                 stdin, stdout, stderr = client.exec_command(DGIT_SSH_SERVER_COMMAND)
-                token = stdout.read().decode("utf8").strip()
+                data = stdout.read().decode("utf8").strip()
+                data = json.loads(data)
             except SSHException as e:
                 print(e)
                 print("Can't connect to Dgit SSH server. SSH Authentication failed")
             client.close()
 
-        if token and clone_by:
-            print(clone(repository,clone_by,token))
+        if data['status'] == 'True':
+            token = data['data']
+            if token:
+                if not os.path.isdir(DGIT):
+                    os.mkdir(DGIT)
+                with open(USER_SIGNATURE,'wb+') as signature:
+                    signature.write(bytes(token,'utf-8'))
+                clone_data=clone(token)
+                #call dgit init after this
+        else:
+            print(data['message'])
 
     def branch(self):
-
-        print(self.get_head())
-
-
+        print(f"You're on {self.get_branch_name(self.get_head())}")
 
     def status(self):
         diff_data = []
@@ -100,7 +111,33 @@ class DGitCommand():
 
 
     def add(self,path):
-        self.diff_files()
+        # self.diff_files()
+        indices = None
+        with open(INDEX_PATH, 'r') as index:
+            indices = index.read().splitlines()
+        try:
+            latest_index = int(indices[-1].split('=')[0])
+        except:
+            latest_index = 0
+
+        indices = [index.split('=')[1] for index in indices]
+
+        for root, d_names, f_names in os.walk(self.cwd):
+            if multiple_find(root,[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
+                for filename in f_names:
+                    f = os.path.join(root, filename)
+                    if os.path.isfile(f) and (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]):
+                        if f not in indices:
+                            latest_index = latest_index+1
+                            DGitFile(
+                                fname=filename,
+                                index=latest_index,
+                                last_update=None,
+                                path=f,
+                                branch=None,
+                                commit=None
+                            ).save()
+
 
     def stash(self):
         diff_data = []
@@ -136,16 +173,12 @@ class DGitCommand():
 
     def diff(self):
         diff_data = []
-        for root, d_names, f_names in os.walk(self.cwd):
-            if multiple_find(root, [dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
-                for filename in f_names:
-                    f = os.path.join(root, filename)
-                    if os.path.isfile(f) and (
-                            filename.split('.')[1] not in [ext.replace('.', '') for ext in self.ignore_]):
-                        diff_data.append(DGitFile(
-                            fname=filename,
-                            path=f
-                        ).check_diff())
+        indices, all_files, file_state, indexed_files = self.diff_files()
+        for file in indexed_files:
+            diff_data.append(DGitFile(
+                fname=file['name'],
+                path=file['path']
+            ).check_diff())
         print('Changes')
         for data in diff_data:
             if data['status'] == True:
@@ -153,6 +186,7 @@ class DGitCommand():
                 formatted_out = diff_out(data['data'])
                 for line in formatted_out:
                     print(line)
+        #Can include newly added file's contents
 
     def checkout(self,branch):
         repository = 'e4e5647ef05e41d0a40f8af274ee8443'
@@ -187,11 +221,14 @@ class DGitCommand():
 
     #HELPER FUNCTIONS
 
-    def get_head(self):
+    def get_head(self,is_name = False):
         head_ref = None
         with open(HEAD, 'r') as head:
             head_ref = head.readline()
-        return head_ref
+        if is_name:
+            return ''
+        else:
+            return head_ref
 
     def set_head(self, branch):
         with open(f'{HEAD}', 'wb+') as head:
@@ -203,17 +240,33 @@ class DGitCommand():
             branch_id = branch_f.readline()
         return branch_id
 
+    def get_branch_name(self,branch_id):
+        branch_name = ''
+        with open(f'{BRANCH_REF_INDEX}', 'r') as branch_f:
+            branches = branch_f.readlines()
+            for branch in branches:
+                if branch.split('=')[0] == branch_id:
+                    branch_name = branch.split('=')[1]
+        return branch_name
+
     def set_branch(self,branch,branch_id):
         branch_ref = branch.rsplit('/',1)
         if len(branch_ref)!=1:
             if not os.path.isdir(f'{BRANCH_REF}/{branch_ref[0]}'):
                 os.makedirs(f'{BRANCH_REF}/{branch_ref[0]}')
 
+            if not os.path.isdir(f'{BRANCH_PATH}/{branch}'):
+                os.makedirs(f'{BRANCH_PATH}/{branch}')
+
         with open(f'{BRANCH_REF}/{branch}', 'wb+') as branch_f:
             branch_f.write(bytes(branch_id,'utf-8'))
+
+        with open(f'{BRANCH_REF_INDEX}', 'wb') as branch_index:
+            branch_index.write(bytes(f'{branch_id}={branch}', 'utf-8'))
+
         return branch_id
 
-    def diff_files(self):
+    def diff_files(self): 
         """
         Returns various lists as follows\n
         indices : Files in index registry\n

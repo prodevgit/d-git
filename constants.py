@@ -1,3 +1,5 @@
+DGIT = '.dgit'
+
 OBJECT_PATH = '.dgit/objects'
 
 INDEX_PATH = '.dgit/index'
@@ -10,13 +12,13 @@ RECENT_PATH = './dgit/recent_registry'
 
 BRANCH_REF = '.dgit/refs'
 
+BRANCH_REF_INDEX = '.dgit/refs/REF_INDEX'
+
+USER_SIGNATURE = '.dgit/signature'
 
 DGIT_IGNORE = '.dgitignore'
 
-CLONE_BY_SSH = 'ssh'
 CLONE_BY_USERAUTH = 'userauth'
-
-DGIT_SSH_SERVER_COMMAND = '/home/devd/dev/d-git-server/venv/bin/python /home/devd/dev/d-git-server/generate_ssh_token.py'
 
 class TColors:
     HEADER = '\033[95m'
