@@ -1,7 +1,10 @@
 import json
 import uuid
-
 import requests
+
+from constants import USER_SIGNATURE
+
+
 BASE_URL = 'http://localhost:8000/api/v1'
 
 def checkout(repository,name,parent=None):
@@ -10,6 +13,7 @@ def checkout(repository,name,parent=None):
     data['name'] = name
     data['parent'] = parent
     r = requests.post(f'{BASE_URL}/branch/{repository}/create',data=data,headers=HEADERS)
+    print(r.json())
     return r.json()
 
 def push(repository,branch,commit,file_data):
@@ -44,11 +48,19 @@ def push(repository,branch,commit,file_data):
 
 def clone(token):
     HEADERS = {'Authorization': token}
-    print(HEADERS)
     # r = requests.post(f'{BASE_URL}/repository/clone', data=data,params={'clone_by': clone_by},headers=HEADERS)
     r = requests.post(f'{BASE_URL}/repository/clone', headers=HEADERS)
     return r.json()
 
+def get_clone_file(object):
+    HEADERS = {'Authorization': get_repo_token()}
+    r = requests.get(object['url'], headers=HEADERS)
+    return r.content
+
 def get_ssh_server_command():
     r = requests.get(f'{BASE_URL}/ssh/server-command-retreive')
     return r.json()
+
+def get_repo_token():
+    with open(USER_SIGNATURE, 'r') as signature:
+        return signature.readline().split('\n')[0]

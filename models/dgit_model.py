@@ -48,7 +48,6 @@ class DGitFile():
             # sha256.update(data)
             # self.integrity = sha256.hexdigest()
             self.integrity = hashlib.md5(data).hexdigest()
-            print(self.integrity)
             self.last_update = time.time()
             file.close()
             index_file = open(f'{INDEX_PATH}','ab')

@@ -1,7 +1,8 @@
-
+import requests
 
 from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH, TColors
 from helper import difflib
+from network import get_clone_file
 from serializer import FileSerializer
 from itertools import chain, zip_longest
 
@@ -38,14 +39,49 @@ def diff_out(source_file):
     return formatted_diff
 
 def multiple_find(str,query_list):
+    print("Dirs: ",query_list)
     s = [str.find(x) for x in query_list]
+    print(s)
     return sum(s)
 
 def check_branch_exists(branch_name):
     return 0
 
 def process_clone_data(clone_data):
+    # try:
+    objects_count = clone_data['data']['objects_count']
     branches = clone_data['data']['data']
+    current_count = 1
     for i in branches:
-        print(i['name'])
+        commits = i['commits']
+        for commit_key,commit in commits.items():
+            objects = commit['objects']
+            for object_key,object in objects.items():
+                with open(object['path'],'wb+') as f:
+                    file_content = get_clone_file(object)
+                    f.write(file_content)
+                progressBar(current_count,objects_count,20)
+                current_count = current_count + 1
+
+def progressBar(index, total, bar_len=50, title='Please wait'):
+    '''
+    index is expected to be 0 based index.
+    0 <= index < total
+    '''
+    percent_done = (index+1)/total*100
+    percent_done = round(percent_done, 1)
+
+    done = round(percent_done/(100/bar_len))
+    togo = bar_len-done
+
+    done_str = '█'*int(done)
+    togo_str = '░'*int(togo)
+
+    # print(f' [{done_str}{togo_str}] {percent_done}% done', end='\r')
+    print(f' [{done_str}{togo_str}] {index+1}/{total} files', end='\r')
+
+    if round(percent_done) == 100:
+        print('')
+
+
 

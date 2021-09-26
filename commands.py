@@ -19,6 +19,8 @@ class DGitCommand():
         try:
             with open(DGIT_IGNORE,'r') as ignore_file:
                 self.ignore_ = ignore_file.read().splitlines()
+                if '.dgit/' not in self.ignore_:
+                    self.ignore_.append('.dgit/')
                 self.active = True
         except FileNotFoundError:
             import sys
@@ -31,9 +33,8 @@ class DGitCommand():
                     self.active = False
             except:
                 pass
+
     def init_repo(self):
-        # if not os.path.isdir('.dgit'):
-        print(99)
         if not os.path.isdir('.dgit'):
             os.mkdir('.dgit')
         if not os.path.isdir(OBJECT_PATH):
@@ -48,13 +49,23 @@ class DGitCommand():
         try:
             latest_index = registry.readlines()[-1]
         except:
+            print("lat index")
             latest_index = 0
         registry.close()
         for root, d_names, f_names in os.walk(self.cwd):
-            if multiple_find(root,[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
+            print(root)
+            if multiple_find(f'{root}/',[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
                 for filename in f_names:
+                    print(f_names)
+                    print(filename)
                     f = os.path.join(root, filename)
-                    if os.path.isfile(f) and (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]):
+                    file_type_status = False
+                    try:
+                        file_type_status = (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_])
+                    except:
+                        file_type_status = False
+
+                    if os.path.isfile(f) and file_type_status:
                         latest_index = latest_index+1
                         DGitFile(
                             fname=filename,
@@ -212,16 +223,18 @@ class DGitCommand():
         #Can include newly added file's contents
 
     def checkout(self,branch):
-        repository = 'e4e5647ef05e41d0a40f8af274ee8443'
-        response = checkout(repository,branch)
-        if response['data']['operation'] == 'create':
-            print('Branch created :',response['data']['id'])
-            self.set_branch(branch,response['data']['id'])
+        try:
+            repository = 'e4e5647ef05e41d0a40f8af274ee8443'
+            response = checkout(repository,branch)
+            if response['data']['operation'] == 'create':
+                print('Branch created :',response['data']['id'])
+                self.set_branch(branch,response['data']['id'])
 
-        elif response['data']['operation'] == 'exists':
-            print('Branch already exists :',response['data']['id'])
-        self.set_head(response['data']['id'])
-
+            elif response['data']['operation'] == 'exists':
+                print('Branch already exists :',response['data']['id'])
+            self.set_head(response['data']['id'])
+        except Exception as e:
+            print(e)
 
     def push(self):
         print('pushing')

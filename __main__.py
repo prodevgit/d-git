@@ -48,7 +48,10 @@ def stash():
 @click.argument('parent', required=False)
 # @click.option('--parent', '-p')
 def checkout(branch,parent):
+    print(branch)
+    print(parent)
     if branch:
+        print(branch)
         if parent:
             print("Creating a new branch under a parent")
             print(branch)
@@ -62,6 +65,7 @@ def checkout(branch,parent):
         if parent:
             print('Created branch7')
             print(parent)
+            dgit_instance.checkout(parent)
         else:
             print('Wrong arguments')
 
