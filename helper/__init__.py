@@ -1,3 +1,6 @@
+import glob
+import os.path
+
 import requests
 
 from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH, TColors
@@ -47,22 +50,31 @@ def multiple_find(str,query_list):
 def check_branch_exists(branch_name):
     return 0
 
-def process_clone_data(clone_data):
+def process_clone_data(clone_data,token):
     # try:
+    repository_name = clone_data['data']['name']
     objects_count = clone_data['data']['objects_count']
     branches = clone_data['data']['data']
+    default_branch = clone_data['data']['default']
     current_count = 1
-    for i in branches:
-        commits = i['commits']
+    if not os.path.isdir(f'{os.getcwd()}/{repository_name}'):
+        os.mkdir(repository_name)
+    for branch in branches:
+        # if branch['object_id'] == default_branch['object_id']:
+        #
+        # else:
+        commits = branch['commits']
         for commit_key,commit in commits.items():
             objects = commit['objects']
             for object_key,object in objects.items():
-                with open(object['path'],'wb+') as f:
-                    file_content = get_clone_file(object)
+                with open(f"{repository_name}/{object['path']}",'wb+') as f:
+                    file_content = get_clone_file(object,token)
                     f.write(file_content)
                 progressBar(current_count,objects_count,20)
                 current_count = current_count + 1
 
+def process_default_branch(branch_data):
+    pass
 def progressBar(index, total, bar_len=50, title='Please wait'):
     '''
     index is expected to be 0 based index.
@@ -82,6 +94,10 @@ def progressBar(index, total, bar_len=50, title='Please wait'):
 
     if round(percent_done) == 100:
         print('')
+
+def get_ssh_by_fingerprint(fingerprint):
+    ssh_path=f"{os.path.expanduser('~')}/.ssh"
+    public_keys = glob.glob(f"{ssh_path}*/*.pub")
 
 
 

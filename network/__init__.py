@@ -2,17 +2,16 @@ import json
 import uuid
 import requests
 
-from constants import USER_SIGNATURE
-
+from constants import USER_SIGNATURE, REPOSITORY_ID
 
 BASE_URL = 'http://localhost:8000/api/v1'
 
-def checkout(repository,name,parent=None):
-    HEADERS = {'Authorization': 'Token 53d3d1310cd736aa5ec02ff550c48ec30767d95d'}
+def checkout(name,parent=None):
+    HEADERS = {'Authorization': get_repo_token()}
     data = {}
     data['name'] = name
     data['parent'] = parent
-    r = requests.post(f'{BASE_URL}/branch/{repository}/create',data=data,headers=HEADERS)
+    r = requests.post(f'{BASE_URL}/branch/{get_repo_id()}/console-create',data=data,headers=HEADERS)
     print(r.json())
     return r.json()
 
@@ -52,8 +51,8 @@ def clone(token):
     r = requests.post(f'{BASE_URL}/repository/clone', headers=HEADERS)
     return r.json()
 
-def get_clone_file(object):
-    HEADERS = {'Authorization': get_repo_token()}
+def get_clone_file(object,token):
+    HEADERS = {'Authorization': token}
     r = requests.get(object['url'], headers=HEADERS)
     return r.content
 
@@ -64,3 +63,7 @@ def get_ssh_server_command():
 def get_repo_token():
     with open(USER_SIGNATURE, 'r') as signature:
         return signature.readline().split('\n')[0]
+
+def get_repo_id():
+    with open(REPOSITORY_ID, 'r') as repository:
+        return repository.readline().split('\n')[0]

@@ -1,11 +1,13 @@
 import json
 import os
 
+from binascii import hexlify
+
 import paramiko
 from paramiko.ssh_exception import SSHException
 
 from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, \
-     USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX
+    USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX, REPOSITORY_ID
 from helper import multiple_find, get_file_index, diff_out, process_clone_data
 from models import DGitFile
 from network import push, checkout, clone, get_ssh_server_command
@@ -34,13 +36,16 @@ class DGitCommand():
             except:
                 pass
 
-    def init_repo(self):
+    def init_repo(self,repository=None):
         if not os.path.isdir('.dgit'):
             os.mkdir('.dgit')
         if not os.path.isdir(OBJECT_PATH):
             os.mkdir(OBJECT_PATH)
         if not os.path.isdir(BRANCH_REF):
             os.mkdir(BRANCH_REF)
+        if repository:
+            with open(REPOSITORY_ID,'w+') as f:
+                f.write(repository)
         with open(BRANCH_REF_INDEX,'wb+') as f:
             f.write(b'')
         registry = open(f'{INDEX_PATH}','wb')
@@ -77,11 +82,13 @@ class DGitCommand():
                         ).save()
 
     def clone(self,sshkey,repository):
-        if not os.path.isdir(DGIT):
-            os.mkdir(DGIT)
-        if os.path.isfile(USER_SIGNATURE):
+
+        file_check_repo = repository.split(':')[1]
+        file_check_repo = file_check_repo.split('/')[1]
+
+        if os.path.isfile(f'{file_check_repo}/{USER_SIGNATURE}'):
             print("You're already in a repository")
-            # exit()
+            exit()
         data = {}
         if '@' in repository:
             hostname, repository = repository.split(':')
@@ -89,8 +96,12 @@ class DGitCommand():
             from paramiko.client import SSHClient
             client = SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
             try:
                 client.connect(hostname=hostname, username=user, key_filename=sshkey)
+                sshkey_fingerprint = hexlify(client.get_transport().__dict__['auth_handler'].private_key.get_fingerprint(),'-')
+                # ssh - keygen - E md5 - lf < fileName >
+
                 ssh_response = get_ssh_server_command()
                 if ssh_response['status'] == False:
                     print("Clone failed due to dgit server error")
@@ -107,13 +118,24 @@ class DGitCommand():
         if data['status'] == 'True':
             token = data['data']
             if token:
-                with open(USER_SIGNATURE,'wb+') as signature:
+
+                if not os.path.isdir(f'{file_check_repo}/{DGIT}'):
+                    os.makedirs(f'{file_check_repo}/{DGIT}')
+                with open(f'{file_check_repo}/{USER_SIGNATURE}','wb+') as signature:
                     signature.write(bytes(token,'utf-8'))
+
                 clone_data=clone(token)
-                process_clone_data(clone_data)
-                #call dgit init after this
+                process_clone_data(clone_data,token)
+
+                os.chdir(f'{os.getcwd()}/{file_check_repo}')
+                repo_init_command_instance = DGitCommand()
+                repo_init_command_instance.init_repo(repository=clone_data['data']['repository'])
+
+
         else:
             print(data['message'])
+
+
 
     def branch(self):
         print(f"You're on {self.get_branch_name(self.get_head())}")
@@ -224,8 +246,7 @@ class DGitCommand():
 
     def checkout(self,branch):
         try:
-            repository = 'e4e5647ef05e41d0a40f8af274ee8443'
-            response = checkout(repository,branch)
+            response = checkout(branch)
             if response['data']['operation'] == 'create':
                 print('Branch created :',response['data']['id'])
                 self.set_branch(branch,response['data']['id'])

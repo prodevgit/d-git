@@ -14,6 +14,8 @@ BRANCH_REF = '.dgit/refs'
 
 BRANCH_REF_INDEX = '.dgit/refs/REF_INDEX'
 
+REPOSITORY_ID = '.dgit/repository'
+
 USER_SIGNATURE = '.dgit/signature'
 
 DGIT_IGNORE = '.dgitignore'
