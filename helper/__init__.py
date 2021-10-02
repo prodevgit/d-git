@@ -3,12 +3,13 @@ import os.path
 
 import requests
 
-from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH, TColors
+from constants import INDEX_PATH, RECENT_PATH, OBJECT_PATH, TColors, SSH_FINGERPRINT, BRANCH_REF, BRANCH_PATH, \
+    BRANCH_REF_INDEX
 from helper import difflib
-from network import get_clone_file
+from network import get_clone_file, get_token_by_ssh
 from serializer import FileSerializer
 from itertools import chain, zip_longest
-
+import subprocess
 
 def write_index(fid,branch,commit):
     f = open(f'{INDEX_PATH}','wb')
@@ -42,9 +43,7 @@ def diff_out(source_file):
     return formatted_diff
 
 def multiple_find(str,query_list):
-    print("Dirs: ",query_list)
     s = [str.find(x) for x in query_list]
-    print(s)
     return sum(s)
 
 def check_branch_exists(branch_name):
@@ -60,9 +59,10 @@ def process_clone_data(clone_data,token):
     if not os.path.isdir(f'{os.getcwd()}/{repository_name}'):
         os.mkdir(repository_name)
     for branch in branches:
-        # if branch['object_id'] == default_branch['object_id']:
-        #
-        # else:
+        curr_dir = os.getcwd()
+        os.chdir(f'{os.getcwd()}/{repository_name}')
+        set_branch(branch['name'],branch['object_id'])
+        os.chdir(curr_dir)
         commits = branch['commits']
         for commit_key,commit in commits.items():
             objects = commit['objects']
@@ -70,6 +70,7 @@ def process_clone_data(clone_data,token):
                 with open(f"{repository_name}/{object['path']}",'wb+') as f:
                     file_content = get_clone_file(object,token)
                     f.write(file_content)
+                    # with open
                 progressBar(current_count,objects_count,20)
                 current_count = current_count + 1
 
@@ -95,9 +96,22 @@ def progressBar(index, total, bar_len=50, title='Please wait'):
     if round(percent_done) == 100:
         print('')
 
-def get_ssh_by_fingerprint(fingerprint):
-    ssh_path=f"{os.path.expanduser('~')}/.ssh"
-    public_keys = glob.glob(f"{ssh_path}*/*.pub")
 
+def set_branch(branch,branch_id):
+    branch_ref = branch.rsplit('/',1)
+    if len(branch_ref)!=1:
+        if not os.path.isdir(f'{BRANCH_REF}/{branch_ref[0]}'):
+            os.makedirs(f'{BRANCH_REF}/{branch_ref[0]}')
+
+    if not os.path.isdir(f'{BRANCH_PATH}/{branch}'):
+        os.makedirs(f'{BRANCH_PATH}/{branch}')
+
+    with open(f'{BRANCH_REF}/{branch}', 'ab+') as branch_f:
+        branch_f.write(bytes(branch_id,'utf-8'))
+
+    with open(f'{BRANCH_REF_INDEX}', 'ab') as branch_index:
+        branch_index.write(bytes(f'{branch_id}={branch}\n', 'utf-8'))
+
+    return branch_id
 
 

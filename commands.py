@@ -7,10 +7,10 @@ import paramiko
 from paramiko.ssh_exception import SSHException
 
 from constants import DGIT_IGNORE, INDEX_PATH, OBJECT_PATH, TColors, HEAD, BRANCH_REF, \
-    USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX, REPOSITORY_ID
+    USER_SIGNATURE, DGIT, BRANCH_PATH, BRANCH_REF_INDEX, REPOSITORY_ID, SSH_FINGERPRINT
 from helper import multiple_find, get_file_index, diff_out, process_clone_data
 from models import DGitFile
-from network import push, checkout, clone, get_ssh_server_command
+from network import push, checkout, clone, get_ssh_server_command, get_token_by_ssh
 
 
 class DGitCommand():
@@ -24,7 +24,8 @@ class DGitCommand():
                 if '.dgit/' not in self.ignore_:
                     self.ignore_.append('.dgit/')
                 self.active = True
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            print(e)
             import sys
             try:
                 arg = sys.argv[1]
@@ -36,7 +37,7 @@ class DGitCommand():
             except:
                 pass
 
-    def init_repo(self,repository=None):
+    def generate_support_files(self,repository=None):
         if not os.path.isdir('.dgit'):
             os.mkdir('.dgit')
         if not os.path.isdir(OBJECT_PATH):
@@ -48,27 +49,27 @@ class DGitCommand():
                 f.write(repository)
         with open(BRANCH_REF_INDEX,'wb+') as f:
             f.write(b'')
+
+    def init_repo(self):
+        with open(BRANCH_REF_INDEX,'wb+') as f:
+            f.write(b'')
         registry = open(f'{INDEX_PATH}','wb')
         with open(HEAD,'wb+') as head:
             head.write(b'')
         try:
             latest_index = registry.readlines()[-1]
         except:
-            print("lat index")
             latest_index = 0
         registry.close()
         for root, d_names, f_names in os.walk(self.cwd):
-            print(root)
             if multiple_find(f'{root}/',[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
                 for filename in f_names:
-                    print(f_names)
-                    print(filename)
                     f = os.path.join(root, filename)
                     file_type_status = False
                     try:
-                        file_type_status = (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_])
+                        file_type_status = filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]
                     except:
-                        file_type_status = False
+                        file_type_status = filename not in [ext.replace('.','') for ext in self.ignore_]
 
                     if os.path.isfile(f) and file_type_status:
                         latest_index = latest_index+1
@@ -99,9 +100,7 @@ class DGitCommand():
 
             try:
                 client.connect(hostname=hostname, username=user, key_filename=sshkey)
-                sshkey_fingerprint = hexlify(client.get_transport().__dict__['auth_handler'].private_key.get_fingerprint(),'-')
-                # ssh - keygen - E md5 - lf < fileName >
-
+                sshkey_fingerprint = hexlify(client.get_transport().__dict__['auth_handler'].private_key.get_fingerprint(),':').decode('utf-8')
                 ssh_response = get_ssh_server_command()
                 if ssh_response['status'] == False:
                     print("Clone failed due to dgit server error")
@@ -125,11 +124,20 @@ class DGitCommand():
                     signature.write(bytes(token,'utf-8'))
 
                 clone_data=clone(token)
+                curr_dir = os.getcwd()
+                os.chdir(f'{os.getcwd()}/{clone_data["data"]["name"]}')
+                repo_init_command_instance = DGitCommand()
+                repo_init_command_instance.generate_support_files(repository=clone_data["data"]["name"])
+                os.chdir(curr_dir)
+
                 process_clone_data(clone_data,token)
 
                 os.chdir(f'{os.getcwd()}/{file_check_repo}')
+                with open(SSH_FINGERPRINT,'w+') as f:
+                    f.write(sshkey_fingerprint)
+
                 repo_init_command_instance = DGitCommand()
-                repo_init_command_instance.init_repo(repository=clone_data['data']['repository'])
+                repo_init_command_instance.init_repo()
 
 
         else:
@@ -179,7 +187,7 @@ class DGitCommand():
         indices = [index.split('=')[1] for index in indices]
 
         for root, d_names, f_names in os.walk(self.cwd):
-            if multiple_find(root,[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
+            if multiple_find(f'{root}/',[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
                 for filename in f_names:
                     f = os.path.join(root, filename)
                     if os.path.isfile(f) and (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]):
@@ -307,7 +315,9 @@ class DGitCommand():
         return branch_name
 
     def set_branch(self,branch,branch_id):
+        print("Branch: ",branch)
         branch_ref = branch.rsplit('/',1)
+        print("Branch Split: ",branch_ref)
         if len(branch_ref)!=1:
             if not os.path.isdir(f'{BRANCH_REF}/{branch_ref[0]}'):
                 os.makedirs(f'{BRANCH_REF}/{branch_ref[0]}')
@@ -340,10 +350,15 @@ class DGitCommand():
         all_files = []
         indexed_files = []
         for root, d_names, f_names in os.walk(self.cwd):
-            if multiple_find(root,[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
+            if multiple_find(f'{root}/',[dir for dir in self.ignore_ if dir.__contains__('/')]) < 0:
                 for filename in f_names:
                     f = os.path.join(root, filename)
-                    if os.path.isfile(f) and (filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]):
+                    file_ext_status = None
+                    try:
+                        file_ext_status = filename.split('.')[1] not in [ext.replace('.','') for ext in self.ignore_]
+                    except:
+                        file_ext_status = filename not in [ext.replace('.','') for ext in self.ignore_]
+                    if os.path.isfile(f) and file_ext_status:
                         all_files.append(f)
                         if f in indices:
                             indexed_files.append({'path':f,'name':filename})

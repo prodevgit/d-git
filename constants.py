@@ -22,6 +22,8 @@ DGIT_IGNORE = '.dgitignore'
 
 CLONE_BY_USERAUTH = 'userauth'
 
+SSH_FINGERPRINT = '.dgit/fingerprint'
+
 class TColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
